@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Gen Z Accounts Submission{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h3><i class="fas fa-user-plus me-2"></i>Create Account</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="username" class="form-label">Username *</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" id="email" name="email">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password *</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="form-text">Minimum 6 characters recommended</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="referral_code" class="form-label">Referral Code (Optional)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-gift"></i></span>
+                            <input type="text" class="form-control" id="referral_code" name="referral_code" placeholder="Enter referral code if you have one">
+                        </div>
+                        <div class="form-text text-success">
+                            <i class="fas fa-star me-1"></i>
+                            Your referrer will get 20 TK bonus when you join!
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="terms" required>
+                        <label class="form-check-label" for="terms">
+                            I agree to the <a href="#" class="text-primary">Terms of Service</a> and <a href="#" class="text-primary">Privacy Policy</a>
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>Create Account
+                        </button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <p class="mb-0">Already have an account?</p>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </a>
+                </div>
+                
+                <!-- MLM Benefits Info -->
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6 class="text-primary mb-2"><i class="fas fa-network-wired me-2"></i>MLM Benefits</h6>
+                    <ul class="list-unstyled mb-0 small">
+                        <li><i class="fas fa-check text-success me-2"></i>Earn 20 TK for each direct referral</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Get commission from 5 levels down</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Build passive income stream</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

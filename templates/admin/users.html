@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - Admin{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-users me-2"></i>User Management</h4>
+        <div class="d-flex gap-2">
+            <form method="GET" class="d-flex">
+                <input type="text" name="search" class="form-control" placeholder="Search users..." value="{{ search }}">
+                <button type="submit" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if users.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Contact</th>
+                            <th>Balance</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users.items %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar me-2">
+                                        {% if user.is_admin %}
+                                            <i class="fas fa-crown text-warning"></i>
+                                        {% elif user.is_premium %}
+                                            <i class="fas fa-star text-success"></i>
+                                        {% else %}
+                                            <i class="fas fa-user-circle text-muted"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ user.username }}</div>
+                                        {% if user.first_name or user.last_name %}
+                                            <small class="text-muted">{{ user.get_full_name() }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if user.email %}
+                                    <div><i class="fas fa-envelope me-1"></i>{{ user.email }}</div>
+                                {% endif %}
+                                {% if user.phone %}
+                                    <div><i class="fas fa-phone me-1"></i>{{ user.phone }}</div>
+                                {% endif %}
+                                {% if user.telegram_id %}
+                                    <div><i class="fab fa-telegram me-1"></i>{{ user.telegram_id }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-bold text-success">{{ "{:,.2f}".format(user.balance) }} TK</div>
+                                <small class="text-muted">Earned: {{ "{:,.2f}".format(user.total_earned) }} TK</small>
+                            </td>
+                            <td>
+                                {% if user.is_banned %}
+                                    <span class="badge bg-danger">Banned</span>
+                                {% elif not user.is_active %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% else %}
+                                    <span class="badge bg-success">Active</span>
+                                {% endif %}
+                                {% if user.is_premium %}
+                                    <span class="badge bg-warning">Premium</span>
+                                {% endif %}
+                                {% if user.is_admin %}
+                                    <span class="badge bg-info">Admin</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span title="{{ user.created_at.strftime('%B %d, %Y at %I:%M %p') }}">
+                                    {{ user.created_at.strftime('%m/%d/%Y') }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" onclick="viewUser({{ user.id }})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning" onclick="editUser({{ user.id }})" title="Edit User">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    {% if not user.is_banned %}
+                                        <button class="btn btn-outline-danger" onclick="banUser({{ user.id }})" title="Ban User">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-outline-success" onclick="unbanUser({{ user.id }})" title="Unban User">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if users.pages > 1 %}
+            <nav aria-label="User pagination">
+                <ul class="pagination justify-content-center">
+                    {% if users.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.users', page=users.prev_num, search=search) }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in users.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != users.page %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.users', page=page_num, search=search) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if users.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.users', page=users.next_num, search=search) }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No Users Found</h4>
+                {% if search %}
+                    <p class="text-muted">No users match your search criteria.</p>
+                    <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">Clear Search</a>
+                {% else %}
+                    <p class="text-muted">No users have registered yet.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- User Details Modal -->
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">User Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="userModalContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    
+                    <div class="mb-3">
+                        <label for="editBalance" class="form-label">Balance</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="editBalance" step="0.01">
+                            <span class="input-group-text">TK</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editPremium">
+                            <label class="form-check-label" for="editPremium">
+                                Premium User
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editAdmin">
+                            <label class="form-check-label" for="editAdmin">
+                                Admin Access
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewUser(userId) {
+    const modal = new bootstrap.Modal(document.getElementById('userModal'));
+    document.getElementById('userModalContent').innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Loading user details...</p>
+        </div>
+    `;
+    modal.show();
+    
+    // Here you would fetch user details via AJAX
+    // For now, showing placeholder
+    setTimeout(() => {
+        document.getElementById('userModalContent').innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Detailed user information would be displayed here, including:
+                <ul class="mb-0 mt-2">
+                    <li>Complete profile information</li>
+                    <li>File submission history</li>
+                    <li>Withdrawal history</li>
+                    <li>MLM statistics</li>
+                    <li>Activity logs</li>
+                </ul>
+            </div>
+        `;
+    }, 1000);
+}
+
+function editUser(userId) {
+    // Pre-fill form with user data
+    document.getElementById('editUserId').value = userId;
+    
+    // Here you would fetch current user data
+    // For now, using placeholder data
+    document.getElementById('editBalance').value = '0.00';
+    document.getElementById('editPremium').checked = false;
+    document.getElementById('editAdmin').checked = false;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+    modal.show();
+}
+
+function saveUser() {
+    const userId = document.getElementById('editUserId').value;
+    const balance = document.getElementById('editBalance').value;
+    const isPremium = document.getElementById('editPremium').checked;
+    const isAdmin = document.getElementById('editAdmin').checked;
+    
+    // Here you would send the data to the server
+    console.log('Saving user:', {userId, balance, isPremium, isAdmin});
+    
+    // Close modal and show success message
+    bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+    alert('User updated successfully!');
+}
+
+function banUser(userId) {
+    if (confirm('Are you sure you want to ban this user?')) {
+        // Here you would send ban request to server
+        console.log('Banning user:', userId);
+        alert('User banned successfully!');
+        location.reload();
+    }
+}
+
+function unbanUser(userId) {
+    if (confirm('Are you sure you want to unban this user?')) {
+        // Here you would send unban request to server
+        console.log('Unbanning user:', userId);
+        alert('User unbanned successfully!');
+        location.reload();
+    }
+}
+</script>
+{% endblock %}

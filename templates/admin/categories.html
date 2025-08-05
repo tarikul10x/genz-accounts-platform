@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Category Management - Admin{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-tags me-2"></i>Category Management</h4>
+                <button class="btn btn-primary" onclick="refreshCategories()">
+                    <i class="fas fa-sync-alt me-2"></i>Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>Category Control</h6>
+                    <p class="mb-0">Control which account categories are available for submission and set rates for each category. Disabled categories will not be visible to users.</p>
+                </div>
+                
+                {% if categories %}
+                    <div class="row">
+                        {% for cat_key, cat_info in categories.items() %}
+                        <div class="col-lg-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-folder me-2"></i>{{ cat_info.name }}
+                                    </h6>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="status_{{ cat_key }}" 
+                                               {{ 'checked' if cat_info.is_active else '' }}
+                                               onchange="toggleCategory('{{ cat_key }}', this.checked)">
+                                        <label class="form-check-label" for="status_{{ cat_key }}">
+                                            {{ 'Active' if cat_info.is_active else 'Disabled' }}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Rate Setting -->
+                                    <form method="POST" action="{{ url_for('admin.update_category_rate', category=cat_key) }}" class="mb-3">
+                                        <div class="row align-items-end">
+                                            <div class="col-8">
+                                                <label for="rate_{{ cat_key }}" class="form-label">Rate per Account</label>
+                                                <div class="input-group">
+                                                    <input type="number" 
+                                                           class="form-control" 
+                                                           id="rate_{{ cat_key }}" 
+                                                           name="rate" 
+                                                           value="{{ cat_info.rate }}" 
+                                                           step="0.01" 
+                                                           min="0">
+                                                    <span class="input-group-text">TK</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <button type="submit" class="btn btn-success w-100">
+                                                    <i class="fas fa-save me-1"></i>Update
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="is_active" value="{{ 'on' if cat_info.is_active else '' }}">
+                                    </form>
+                                    
+                                    <!-- Subcategories -->
+                                    <div class="mb-3">
+                                        <h6 class="text-muted mb-2">Subcategories:</h6>
+                                        <div class="row">
+                                            {% for sub_key, sub_info in cat_info.subcategories.items() %}
+                                            <div class="col-12 mb-2">
+                                                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                                                    <div>
+                                                        <strong>{{ sub_info.name }}</strong>
+                                                        <br><small class="text-muted font-monospace">{{ sub_info.format }}</small>
+                                                    </div>
+                                                    <span class="badge bg-secondary">{{ cat_info.rate }} TK</span>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Statistics -->
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <h6 class="text-primary">{{ cat_info.subcategories|length }}</h6>
+                                            <small class="text-muted">Subcategories</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <h6 class="text-success">{{ "{:.2f}".format(cat_info.rate) }} TK</h6>
+                                            <small class="text-muted">Current Rate</small>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if cat_info.updated %}
+                                    <div class="mt-3 text-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            Last updated: {{ cat_info.updated.strftime('%m/%d/%Y %I:%M %p') }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-tags fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Categories Found</h4>
+                        <p class="text-muted">Categories are not properly configured.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Operations -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Bulk Operations</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" onclick="enableAllCategories()">
+                        <i class="fas fa-check-circle me-2"></i>Enable All Categories
+                    </button>
+                    <button class="btn btn-warning" onclick="disableAllCategories()">
+                        <i class="fas fa-pause-circle me-2"></i>Disable All Categories
+                    </button>
+                    <button class="btn btn-info" onclick="setUniversalRate()">
+                        <i class="fas fa-calculator me-2"></i>Set Universal Rate
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Category Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4 class="text-success">{{ categories.values() | selectattr('is_active') | list | length }}</h4>
+                        <small class="text-muted">Active</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-warning">{{ categories.values() | rejectattr('is_active') | list | length }}</h4>
+                        <small class="text-muted">Disabled</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-info">{{ categories|length }}</h4>
+                        <small class="text-muted">Total</small>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <h6 class="text-primary">
+                        {{ "{:.2f}".format((categories.values() | map(attribute='rate') | sum) / categories|length) }} TK
+                    </h6>
+                    <small class="text-muted">Average Rate</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Toggle Modal -->
+<div class="modal fade" id="dailyToggleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Daily Category Control</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    You can quickly enable/disable categories for daily operations. Users will see a message that disabled categories will be available soon.
+                </div>
+                
+                <div class="row">
+                    {% for cat_key, cat_info in categories.items() %}
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="daily_{{ cat_key }}" {{ 'checked' if cat_info.is_active else '' }}>
+                            <label class="form-check-label" for="daily_{{ cat_key }}">
+                                {{ cat_info.name }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyDailyToggle()">
+                    <i class="fas fa-save me-2"></i>Apply Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Universal Rate Modal -->
+<div class="modal fade" id="universalRateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Set Universal Rate</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    This will set the same rate for all categories. This action cannot be undone.
+                </div>
+                
+                <div class="mb-3">
+                    <label for="universalRate" class="form-label">Universal Rate</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="universalRate" step="0.01" min="0" placeholder="Enter rate...">
+                        <span class="input-group-text">TK per account</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="applyUniversalRate()">
+                    <i class="fas fa-calculator me-2"></i>Apply to All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleCategory(categoryKey, isActive) {
+    // Here you would send AJAX request to toggle category
+    console.log(`Toggling ${categoryKey} to ${isActive}`);
+    
+    // Update UI
+    const label = document.querySelector(`label[for="status_${categoryKey}"]`);
+    label.textContent = isActive ? 'Active' : 'Disabled';
+    
+    // Show toast notification
+    showToast(`${categoryKey} ${isActive ? 'enabled' : 'disabled'} successfully`);
+}
+
+function enableAllCategories() {
+    const checkboxes = document.querySelectorAll('[id^="status_"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        const categoryKey = checkbox.id.replace('status_', '');
+        toggleCategory(categoryKey, true);
+    });
+    showToast('All categories enabled successfully');
+}
+
+function disableAllCategories() {
+    if (confirm('Are you sure you want to disable all categories? Users will not be able to submit any files.')) {
+        const checkboxes = document.querySelectorAll('[id^="status_"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            const categoryKey = checkbox.id.replace('status_', '');
+            toggleCategory(categoryKey, false);
+        });
+        showToast('All categories disabled successfully');
+    }
+}
+
+function setUniversalRate() {
+    const modal = new bootstrap.Modal(document.getElementById('universalRateModal'));
+    modal.show();
+}
+
+function applyUniversalRate() {
+    const rate = document.getElementById('universalRate').value;
+    if (!rate || rate < 0) {
+        alert('Please enter a valid rate');
+        return;
+    }
+    
+    if (confirm(`Set rate to ${rate} TK for all categories?`)) {
+        // Update all rate inputs
+        const rateInputs = document.querySelectorAll('[id^="rate_"]');
+        rateInputs.forEach(input => {
+            input.value = rate;
+        });
+        
+        // Here you would send AJAX request to update all rates
+        bootstrap.Modal.getInstance(document.getElementById('universalRateModal')).hide();
+        showToast(`Universal rate of ${rate} TK applied to all categories`);
+    }
+}
+
+function refreshCategories() {
+    location.reload();
+}
+
+function showToast(message) {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = 'toast show position-fixed top-0 end-0 m-3';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `
+        <div class="toast-header">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">${message}</div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

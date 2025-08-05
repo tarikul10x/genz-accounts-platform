@@ -1,0 +1,33 @@
+# Core Flask Dependencies
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Werkzeug==3.0.1
+SQLAlchemy==2.0.23
+
+# Database Support
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Telegram Bot
+python-telegram-bot==20.7
+
+# Google Sheets Integration
+google-auth==2.25.2
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==2.112.0
+gspread==5.12.4
+
+# Data Processing
+pandas==2.1.4
+openpyxl==3.1.2
+xlrd==2.0.1
+
+# Web Server
+gunicorn==21.2.0
+
+# Email Support
+email-validator==2.1.0
+
+# Utilities
+python-dotenv==1.0.0

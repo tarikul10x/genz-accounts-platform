@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Gen Z Accounts Submission{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-dark text-white rounded-3 p-4">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h2><i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard</h2>
+                    <p class="mb-0">Monitor and manage all system activities</p>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <div class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        Last updated: {{ moment().format('MMM DD, YYYY HH:mm') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Users</h6>
+                        <h2 class="mb-0">{{ "{:,}".format(stats.users.total) }}</h2>
+                        <small>{{ stats.users.active }} active</small>
+                    </div>
+                    <i class="fas fa-users fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Pending Files</h6>
+                        <h2 class="mb-0">{{ stats.files.pending }}</h2>
+                        <small>{{ stats.files.total }} total</small>
+                    </div>
+                    <i class="fas fa-file-alt fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Earnings</h6>
+                        <h2 class="mb-0">{{ "{:,.0f}".format(stats.financial.total_earnings) }}</h2>
+                        <small>TK distributed</small>
+                    </div>
+                    <i class="fas fa-coins fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Pending Withdrawals</h6>
+                        <h2 class="mb-0">{{ stats.withdrawals.pending }}</h2>
+                        <small>{{ "{:,.0f}".format(stats.financial.pending_withdrawals) }} TK</small>
+                    </div>
+                    <i class="fas fa-money-bill-wave fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('admin.files') }}" class="btn btn-warning w-100">
+                            <i class="fas fa-file-alt me-2"></i>Review Files
+                            {% if stats.files.pending > 0 %}
+                                <span class="badge bg-light text-dark ms-1">{{ stats.files.pending }}</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('admin.withdrawals') }}" class="btn btn-info w-100">
+                            <i class="fas fa-money-bill-wave me-2"></i>Withdrawals
+                            {% if stats.withdrawals.pending > 0 %}
+                                <span class="badge bg-light text-dark ms-1">{{ stats.withdrawals.pending }}</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('admin.users') }}" class="btn btn-primary w-100">
+                            <i class="fas fa-users me-2"></i>Manage Users
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('admin.categories') }}" class="btn btn-secondary w-100">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('admin.reports') }}" class="btn btn-success w-100">
+                            <i class="fas fa-chart-bar me-2"></i>Reports
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <button class="btn btn-dark w-100" onclick="refreshData()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-file-alt me-2"></i>Recent File Submissions</h6>
+                <a href="{{ url_for('admin.files') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_files %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>File</th>
+                                    <th>Accounts</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in recent_files %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user-circle me-1 text-muted"></i>
+                                            <span class="small">{{ file.user.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="small" title="{{ file.filename }}">
+                                            {{ file.filename[:15] }}{% if file.filename|length > 15 %}...{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ file.account_count }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'warning' if file.status == 'pending' else ('success' if file.status == 'approved' else 'danger') }} badge-sm">
+                                            {{ file.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if file.status == 'pending' %}
+                                            <a href="{{ url_for('admin.files') }}?file_id={{ file.id }}" class="btn btn-sm btn-outline-primary">Review</a>
+                                        {% else %}
+                                            <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-file-alt fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No recent files</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Recent Withdrawal Requests</h6>
+                <a href="{{ url_for('admin.withdrawals') }}" class="btn btn-sm btn-outline-success">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_withdrawals %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for withdrawal in recent_withdrawals %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user-circle me-1 text-muted"></i>
+                                            <span class="small">{{ withdrawal.user.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="fw-bold">{{ "{:,.0f}".format(withdrawal.amount) }} TK</td>
+                                    <td>
+                                        <span class="badge bg-secondary badge-sm">{{ withdrawal.payment_method }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'warning' if withdrawal.status == 'pending' else ('success' if withdrawal.status == 'approved' else 'danger') }} badge-sm">
+                                            {{ withdrawal.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if withdrawal.status == 'pending' %}
+                                            <a href="{{ url_for('admin.withdrawals') }}?withdrawal_id={{ withdrawal.id }}" class="btn btn-sm btn-outline-success">Review</a>
+                                        {% else %}
+                                            <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-money-bill-wave fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No recent withdrawals</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>File Status Distribution</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small">Approved</span>
+                        <span class="small">{{ stats.files.approved }}</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 6px;">
+                        <div class="progress-bar bg-success" style="width: {{ (stats.files.approved / stats.files.total * 100) if stats.files.total > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small">Pending</span>
+                        <span class="small">{{ stats.files.pending }}</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 6px;">
+                        <div class="progress-bar bg-warning" style="width: {{ (stats.files.pending / stats.files.total * 100) if stats.files.total > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-0">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small">Rejected</span>
+                        <span class="small">{{ stats.files.rejected }}</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 6px;">
+                        <div class="progress-bar bg-danger" style="width: {{ (stats.files.rejected / stats.files.total * 100) if stats.files.total > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-users me-2"></i>User Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 border-end">
+                        <h4 class="text-success">{{ stats.users.active }}</h4>
+                        <small class="text-muted">Active Users</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ stats.users.premium }}</h4>
+                        <small class="text-muted">Premium Users</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-12">
+                        <h5 class="text-danger">{{ stats.users.banned }}</h5>
+                        <small class="text-muted">Banned Users</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Financial Overview</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span class="small">Platform Balance:</span>
+                        <strong class="text-info">{{ "{:,.0f}".format(stats.financial.platform_balance) }} TK</strong>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span class="small">Total Withdrawn:</span>
+                        <strong class="text-success">{{ "{:,.0f}".format(stats.financial.total_withdrawals) }} TK</strong>
+                    </div>
+                </div>
+                <div class="mb-0">
+                    <div class="d-flex justify-content-between">
+                        <span class="small">Pending Withdrawals:</span>
+                        <strong class="text-warning">{{ "{:,.0f}".format(stats.financial.pending_withdrawals) }} TK</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshData() {
+    // Show loading state
+    const refreshBtn = document.querySelector('[onclick="refreshData()"]');
+    const originalContent = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing...';
+    refreshBtn.disabled = true;
+    
+    // Simulate refresh (in real app, this would reload the page or fetch new data)
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+// Auto-refresh every 5 minutes
+setInterval(() => {
+    location.reload();
+}, 5 * 60 * 1000);
+</script>
+{% endblock %}

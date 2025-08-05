@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics - Admin{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-info text-white rounded-3 p-4">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h2><i class="fas fa-chart-bar me-2"></i>Reports & Analytics</h2>
+                    <p class="mb-0">Comprehensive system analytics and reporting dashboard</p>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <button class="btn btn-light" onclick="exportReport()">
+                        <i class="fas fa-download me-2"></i>Export Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Date Range Filter -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row align-items-end">
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-2"></i>Apply Filter
+                        </button>
+                    </div>
+                    <div class="col-md-3 text-md-end">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(7)">7 Days</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(30)">30 Days</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(90)">90 Days</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if reports_data and not reports_data.error %}
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Files</h6>
+                        <h3 class="mb-0">{{ reports_data.total_files }}</h3>
+                    </div>
+                    <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Accounts</h6>
+                        <h3 class="mb-0">{{ "{:,}".format(reports_data.total_accounts) }}</h3>
+                    </div>
+                    <i class="fas fa-users fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Approved</h6>
+                        <h3 class="mb-0">{{ "{:,}".format(reports_data.total_approved_accounts) }}</h3>
+                    </div>
+                    <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Earnings</h6>
+                        <h3 class="mb-0">{{ "{:,.0f}".format(reports_data.total_earnings) }}</h3>
+                        <small>TK</small>
+                    </div>
+                    <i class="fas fa-coins fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card bg-secondary text-white h-100">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Withdrawals</h6>
+                        <h3 class="mb-0">{{ "{:,.0f}".format(reports_data.total_withdrawal_requests) }}</h3>
+                        <small>TK</small>
+                    </div>
+                    <i class="fas fa-money-bill-wave fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card bg-dark text-white h-100">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">New Users</h6>
+                        <h3 class="mb-0">{{ reports_data.new_users }}</h3>
+                    </div>
+                    <i class="fas fa-user-plus fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Analytics -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Submission Trends</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="submissionChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Category Distribution</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" width="200" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Tables -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-file-alt me-2"></i>Recent Files</h6>
+                <a href="{{ url_for('admin.files') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if reports_data.files %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Category</th>
+                                    <th>Accounts</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in reports_data.files[:10] %}
+                                <tr>
+                                    <td>{{ file.user.username }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ file.category|title }}</span>
+                                    </td>
+                                    <td>{{ file.account_count }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'warning' if file.status == 'pending' else ('success' if file.status == 'approved' else 'danger') }}">
+                                            {{ file.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ file.created_at.strftime('%m/%d') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-file-alt fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No files in date range</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Recent Withdrawals</h6>
+                <a href="{{ url_for('admin.withdrawals') }}" class="btn btn-sm btn-outline-success">View All</a>
+            </div>
+            <div class="card-body">
+                {% if reports_data.withdrawals %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for withdrawal in reports_data.withdrawals[:10] %}
+                                <tr>
+                                    <td>{{ withdrawal.user.username }}</td>
+                                    <td class="fw-bold">{{ "{:,.0f}".format(withdrawal.amount) }} TK</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ withdrawal.payment_method }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'warning' if withdrawal.status == 'pending' else ('success' if withdrawal.status == 'approved' else 'danger') }}">
+                                            {{ withdrawal.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ withdrawal.created_at.strftime('%m/%d') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-money-bill-wave fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No withdrawals in date range</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Report Generator -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Daily Report Generator</h6>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <label for="reportDate" class="form-label">Report Date</label>
+                        <input type="date" class="form-control" id="reportDate" value="{{ moment().format('YYYY-MM-DD') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-success" onclick="generateDailyReport()">
+                            <i class="fas fa-file-export me-2"></i>Generate Daily Report
+                        </button>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="text-muted">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                Daily reports include account status checks, duplicate detection, and Google Sheets integration
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Error or No Data State -->
+<div class="text-center py-5">
+    {% if reports_data.error %}
+        <i class="fas fa-exclamation-triangle fa-4x text-warning mb-3"></i>
+        <h4 class="text-warning">Error Loading Reports</h4>
+        <p class="text-muted">{{ reports_data.error }}</p>
+    {% else %}
+        <i class="fas fa-chart-bar fa-4x text-muted mb-3"></i>
+        <h4 class="text-muted">No Data Available</h4>
+        <p class="text-muted">No data found for the selected date range.</p>
+    {% endif %}
+    <button class="btn btn-primary" onclick="location.reload()">
+        <i class="fas fa-sync-alt me-2"></i>Retry
+    </button>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function setDateRange(days) {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    
+    document.getElementById('start_date').value = startDate.toISOString().split('T')[0];
+    document.getElementById('end_date').value = endDate.toISOString().split('T')[0];
+}
+
+function exportReport() {
+    // Generate CSV export
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    // Here you would generate and download a comprehensive report
+    alert(`Exporting report for ${startDate} to ${endDate}...`);
+}
+
+function generateDailyReport() {
+    const reportDate = document.getElementById('reportDate').value;
+    
+    if (!reportDate) {
+        alert('Please select a report date');
+        return;
+    }
+    
+    // Here you would generate a daily report with Google Sheets integration
+    alert(`Generating daily report for ${reportDate}...`);
+}
+
+// Initialize charts if data is available
+{% if reports_data and not reports_data.error %}
+// Submission Trends Chart
+const submissionCtx = document.getElementById('submissionChart').getContext('2d');
+new Chart(submissionCtx, {
+    type: 'line',
+    data: {
+        labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+        datasets: [{
+            label: 'File Submissions',
+            data: [12, 19, 3, 5, 2, 3, 15],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Category Distribution Chart
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Facebook', 'Instagram', 'Gmail', 'WhatsApp', 'Telegram', 'Others'],
+        datasets: [{
+            data: [30, 25, 15, 12, 10, 8],
+            backgroundColor: [
+                '#FF6384',
+                '#36A2EB',
+                '#FFCE56',
+                '#4BC0C0',
+                '#9966FF',
+                '#FF9F40'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

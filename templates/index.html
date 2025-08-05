@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Gen Z Accounts Submission{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="bg-primary text-white rounded-3 p-5 mb-4">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <h1 class="display-4 fw-bold">Gen Z Accounts Submission</h1>
+            <p class="lead">Professional platform for account trading with secure transactions and instant payments.</p>
+            <div class="d-flex gap-3 mt-4">
+                {% if not session.user_id %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-user-plus me-2"></i>Get Started
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('user.dashboard') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a href="{{ url_for('user.submit_file') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-upload me-2"></i>Submit Accounts
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-4 text-center">
+            <i class="fas fa-users fa-8x opacity-75"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-5">
+    <div class="col-md-4 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Total Users</h5>
+                        <h2 class="mb-0">{{ "{:,}".format(stats.total_users) }}</h2>
+                    </div>
+                    <i class="fas fa-users fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Total Earnings</h5>
+                        <h2 class="mb-0">{{ "{:,.2f}".format(stats.total_earnings) }} TK</h2>
+                    </div>
+                    <i class="fas fa-coins fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body text-center">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Files Processed</h5>
+                        <h2 class="mb-0">{{ "{:,}".format(stats.total_files) }}</h2>
+                    </div>
+                    <i class="fas fa-file-alt fa-3x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row mb-5">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-primary text-white rounded-circle p-3 me-3">
+                        <i class="fas fa-upload fa-2x"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Easy Account Submission</h3>
+                </div>
+                <p class="card-text">Submit your accounts through our Telegram bot or web interface. Support for multiple formats including Excel, CSV, and text files.</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>Multiple file formats supported</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Instant validation and processing</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Real-time status updates</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-success text-white rounded-circle p-3 me-3">
+                        <i class="fas fa-money-bill-wave fa-2x"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Instant Payments</h3>
+                </div>
+                <p class="card-text">Get paid instantly when your accounts are approved. Multiple withdrawal methods available with competitive rates.</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>bKash, Nagad, Rocket support</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Binance and bank transfers</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Minimum 500 TK withdrawal</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Account Check Section -->
+<div class="card mb-5">
+    <div class="card-header">
+        <h4 class="mb-0"><i class="fas fa-search me-2"></i>Check Account Status</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="input-group">
+                    <input type="text" id="uidInput" class="form-control form-control-lg" placeholder="Enter UID to check status...">
+                    <button class="btn btn-primary btn-lg" onclick="checkAccountStatus()">
+                        <i class="fas fa-search me-2"></i>Check Status
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="accountResult" class="mt-3"></div>
+    </div>
+</div>
+
+<!-- MLM System -->
+<div class="row mb-5">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-warning text-white rounded-circle p-3 me-3">
+                        <i class="fas fa-network-wired fa-2x"></i>
+                    </div>
+                    <h3 class="card-title mb-0">MLM System</h3>
+                </div>
+                <p class="card-text">Earn commission from your referrals and build a passive income stream through our 5-level MLM system.</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-star text-warning me-2"></i>20 TK instant referral bonus</li>
+                    <li><i class="fas fa-star text-warning me-2"></i>5-level commission structure</li>
+                    <li><i class="fas fa-star text-warning me-2"></i>Real-time earnings tracking</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-info text-white rounded-circle p-3 me-3">
+                        <i class="fas fa-shield-alt fa-2x"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Secure & Reliable</h3>
+                </div>
+                <p class="card-text">Your data and earnings are protected with enterprise-grade security measures and automated backup systems.</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-lock text-info me-2"></i>Encrypted data transmission</li>
+                    <li><i class="fas fa-lock text-info me-2"></i>Automated backups</li>
+                    <li><i class="fas fa-lock text-info me-2"></i>24/7 system monitoring</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Notices -->
+{% if notices %}
+<div class="card">
+    <div class="card-header">
+        <h4 class="mb-0"><i class="fas fa-bullhorn me-2"></i>System Notices</h4>
+    </div>
+    <div class="card-body">
+        {% for notice in notices %}
+            <div class="alert alert-{{ 'info' if notice.notice_type == 'info' else ('warning' if notice.notice_type == 'warning' else ('success' if notice.notice_type == 'success' else 'danger')) }} mb-3">
+                <h5 class="alert-heading">{{ notice.title }}</h5>
+                <p class="mb-0">{{ notice.content }}</p>
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>{{ notice.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                </small>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+function checkAccountStatus() {
+    const uid = document.getElementById('uidInput').value.trim();
+    const resultDiv = document.getElementById('accountResult');
+    
+    if (!uid) {
+        resultDiv.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>Please enter a UID</div>';
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Checking...</div>';
+    
+    fetch('/check-account', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({uid: uid})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>${data.error}</div>`;
+        } else if (data.found) {
+            const statusClass = data.status === 'OK' ? 'success' : (data.status === 'Suspended' ? 'warning' : 'secondary');
+            resultDiv.innerHTML = `
+                <div class="alert alert-${statusClass}">
+                    <h5><i class="fas fa-check-circle me-2"></i>Account Found</h5>
+                    <p><strong>UID:</strong> ${uid}</p>
+                    <p><strong>Status:</strong> <span class="badge bg-${statusClass}">${data.status}</span></p>
+                    <p><strong>Category:</strong> ${data.category || 'Unknown'}</p>
+                    <p><strong>Last Checked:</strong> ${data.last_checked}</p>
+                    ${data.is_duplicate ? '<p><span class="badge bg-danger">Duplicate Account</span></p>' : ''}
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-secondary">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Account Not Found</h5>
+                    <p>The UID "${uid}" was not found in our database.</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error checking account status</div>';
+    });
+}
+
+// Allow Enter key to trigger search
+document.getElementById('uidInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        checkAccountStatus();
+    }
+});
+</script>
+{% endblock %}

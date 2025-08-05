@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Gen Z Accounts Submission{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-primary text-white rounded-3 p-4">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h2><i class="fas fa-tachometer-alt me-2"></i>Welcome back, {{ user.get_full_name() }}!</h2>
+                    <p class="mb-0">Manage your account submissions and track your earnings</p>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <a href="{{ url_for('user.submit_file') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-upload me-2"></i>Submit Accounts
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Current Balance</h6>
+                        <h3 class="mb-0">{{ "{:,.2f}".format(user.balance) }} TK</h3>
+                    </div>
+                    <i class="fas fa-wallet fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Earned</h6>
+                        <h3 class="mb-0">{{ "{:,.2f}".format(user.total_earned) }} TK</h3>
+                    </div>
+                    <i class="fas fa-coins fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Files Submitted</h6>
+                        <h3 class="mb-0">{{ total_files }}</h3>
+                    </div>
+                    <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-secondary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">MLM Earnings</h6>
+                        <h3 class="mb-0">{{ "{:,.2f}".format(user.mlm_earnings) }} TK</h3>
+                    </div>
+                    <i class="fas fa-network-wired fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Status Overview -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-warning">{{ pending_files }}</h4>
+                <p class="card-text">Pending Files</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-success">{{ approved_files }}</h4>
+                <p class="card-text">Approved Files</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">{{ "{:.1f}".format((approved_files / total_files * 100) if total_files > 0 else 0) }}%</h4>
+                <p class="card-text">Approval Rate</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('user.submit_file') }}" class="btn btn-primary w-100">
+                            <i class="fas fa-upload me-2"></i>Submit Files
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('user.withdraw') }}" class="btn btn-success w-100">
+                            <i class="fas fa-money-bill-wave me-2"></i>Withdraw
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('user.history') }}" class="btn btn-info w-100">
+                            <i class="fas fa-history me-2"></i>View History
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-warning w-100" onclick="copyReferralLink()">
+                            <i class="fas fa-share-alt me-2"></i>Share Referral
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Files and MLM Stats -->
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Recent Files</h5>
+                <a href="{{ url_for('user.history') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_files %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>File</th>
+                                    <th>Category</th>
+                                    <th>Accounts</th>
+                                    <th>Status</th>
+                                    <th>Earning</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in recent_files %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-file me-2"></i>
+                                            <span>{{ file.filename[:30] }}{% if file.filename|length > 30 %}...{% endif %}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ file.category|title }}</span>
+                                    </td>
+                                    <td>{{ file.account_count }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'warning' if file.status == 'pending' else ('success' if file.status == 'approved' else 'danger') }}">
+                                            {{ file.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if file.status == 'approved' %}
+                                            <span class="text-success fw-bold">{{ "{:,.2f}".format(file.total_earning) }} TK</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-file-upload fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No files submitted yet</p>
+                        <a href="{{ url_for('user.submit_file') }}" class="btn btn-primary">Submit Your First File</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- MLM Stats -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-network-wired me-2"></i>MLM Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Direct Referrals:</span>
+                        <strong>{{ mlm_stats.direct_referrals or 0 }}</strong>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Total Downline:</span>
+                        <strong>{{ mlm_stats.downline_count or 0 }}</strong>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>MLM Earnings:</span>
+                        <strong class="text-success">{{ "{:,.2f}".format(mlm_stats.total_mlm_earnings or 0) }} TK</strong>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <p class="small text-muted mb-2">Your Referral Code:</p>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control text-center fw-bold" value="{{ user.referral_code }}" id="referralCode" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyReferralCode()">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Withdrawals -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Recent Withdrawals</h6>
+                <a href="{{ url_for('user.withdraw') }}" class="btn btn-sm btn-outline-success">New Withdrawal</a>
+            </div>
+            <div class="card-body">
+                {% if recent_withdrawals %}
+                    {% for withdrawal in recent_withdrawals %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <div class="fw-bold">{{ "{:,.2f}".format(withdrawal.amount) }} TK</div>
+                            <small class="text-muted">{{ withdrawal.payment_method|title }}</small>
+                        </div>
+                        <span class="badge bg-{{ 'warning' if withdrawal.status == 'pending' else ('success' if withdrawal.status == 'approved' else 'danger') }}">
+                            {{ withdrawal.status|title }}
+                        </span>
+                    </div>
+                    {% if not loop.last %}<hr class="my-2">{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center">
+                        <p class="text-muted mb-0">No withdrawals yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyReferralCode() {
+    const codeInput = document.getElementById('referralCode');
+    codeInput.select();
+    document.execCommand('copy');
+    
+    // Show toast or alert
+    alert('Referral code copied to clipboard!');
+}
+
+function copyReferralLink() {
+    const referralLink = `https://t.me/gzias_bot?start={{ user.referral_code }}`;
+    navigator.clipboard.writeText(referralLink).then(() => {
+        alert('Referral link copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}

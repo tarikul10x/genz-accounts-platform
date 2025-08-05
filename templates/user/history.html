@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}File History - Gen Z Accounts Submission{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-history me-2"></i>File Submission History</h4>
+        <a href="{{ url_for('user.submit_file') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Submit New File
+        </a>
+    </div>
+    <div class="card-body">
+        {% if files.items %}
+            <!-- Summary Stats -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h5>{{ files.total }}</h5>
+                            <p class="mb-0">Total Files</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h5>{{ files.items | selectattr('status', 'equalto', 'pending') | list | length }}</h5>
+                            <p class="mb-0">Pending</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h5>{{ files.items | selectattr('status', 'equalto', 'approved') | list | length }}</h5>
+                            <p class="mb-0">Approved</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body text-center">
+                            <h5>{{ files.items | selectattr('status', 'equalto', 'rejected') | list | length }}</h5>
+                            <p class="mb-0">Rejected</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Files Table -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>File Name</th>
+                            <th>Category</th>
+                            <th>Accounts</th>
+                            <th>Status</th>
+                            <th>Earning</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in files.items %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-secondary">#{{ file.file_counter }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-file-{{ 'excel' if file.file_format in ['xlsx', 'xls'] else ('csv' if file.file_format == 'csv' else 'alt') }} me-2 text-muted"></i>
+                                    <span title="{{ file.filename }}">
+                                        {{ file.filename[:25] }}{% if file.filename|length > 25 %}...{% endif %}
+                                    </span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ file.category|title }}</span>
+                                {% if file.subcategory %}
+                                    <br><small class="text-muted">{{ file.subcategory|title }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-bold">{{ file.account_count }}</span>
+                                {% if file.approved_count and file.approved_count != file.account_count %}
+                                    <br><small class="text-success">{{ file.approved_count }} approved</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'warning' if file.status == 'pending' else ('success' if file.status == 'approved' else 'danger') }}">
+                                    {{ file.status|title }}
+                                </span>
+                                {% if file.submission_method %}
+                                    <br><small class="text-muted">via {{ file.submission_method }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if file.status == 'approved' %}
+                                    <span class="text-success fw-bold">
+                                        {{ "{:,.2f}".format(file.total_earning) }} TK
+                                    </span>
+                                    {% if file.rate_per_account %}
+                                        <br><small class="text-muted">{{ "{:.2f}".format(file.rate_per_account) }} TK/account</small>
+                                    {% endif %}
+                                {% elif file.status == 'pending' %}
+                                    <span class="text-muted">Pending review</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span title="{{ file.created_at.strftime('%B %d, %Y at %I:%M %p') }}">
+                                    {{ file.created_at.strftime('%m/%d/%Y') }}
+                                </span>
+                                <br><small class="text-muted">{{ file.created_at.strftime('%I:%M %p') }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" onclick="showFileDetails({{ file.id }})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% if file.sheet_url %}
+                                        <a href="{{ file.sheet_url }}" target="_blank" class="btn btn-outline-success" title="View in Google Sheets">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if files.pages > 1 %}
+            <nav aria-label="File history pagination">
+                <ul class="pagination justify-content-center">
+                    {% if files.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('user.history', page=files.prev_num) }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in files.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != files.page %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('user.history', page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if files.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('user.history', page=files.next_num) }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+        {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="fas fa-file-upload fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No Files Submitted Yet</h4>
+                <p class="text-muted">Start earning by submitting your first account file!</p>
+                <a href="{{ url_for('user.submit_file') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-upload me-2"></i>Submit Your First File
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- File Details Modal -->
+<div class="modal fade" id="fileDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">File Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="fileDetailsContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showFileDetails(fileId) {
+    // This would typically fetch details via AJAX
+    // For now, we'll show a placeholder
+    const modal = new bootstrap.Modal(document.getElementById('fileDetailsModal'));
+    document.getElementById('fileDetailsContent').innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Loading file details...</p>
+        </div>
+    `;
+    modal.show();
+    
+    // Here you would typically make an AJAX call to get detailed file information
+    setTimeout(() => {
+        document.getElementById('fileDetailsContent').innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Detailed file information would be displayed here, including:
+                <ul class="mb-0 mt-2">
+                    <li>Full file content preview</li>
+                    <li>Admin review notes</li>
+                    <li>Processing timeline</li>
+                    <li>Detailed earnings breakdown</li>
+                </ul>
+            </div>
+        `;
+    }, 1000);
+}
+</script>
+{% endblock %}

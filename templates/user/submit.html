@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Accounts - Gen Z Accounts Submission{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-upload me-2"></i>Submit Account Files</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="submitForm">
+                    <!-- Category Selection -->
+                    <div class="mb-4">
+                        <label for="category" class="form-label">Account Category *</label>
+                        <select class="form-select" id="category" name="category" required onchange="updateSubcategories()">
+                            <option value="">Select a category...</option>
+                            {% for cat_key, cat_info in categories.items() %}
+                                {% if cat_info.is_active %}
+                                    <option value="{{ cat_key }}" data-rate="{{ cat_info.rate }}">
+                                        {{ cat_info.name }} - {{ "{:.2f}".format(cat_info.rate) }} TK/account
+                                    </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Subcategory Selection -->
+                    <div class="mb-4">
+                        <label for="subcategory" class="form-label">Subcategory *</label>
+                        <select class="form-select" id="subcategory" name="subcategory" required onchange="updateFormat()">
+                            <option value="">First select a category...</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Format Display -->
+                    <div class="mb-4" id="formatSection" style="display: none;">
+                        <label class="form-label">Required Format</label>
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle me-2"></i>Format Requirements:</h6>
+                            <p id="formatText" class="mb-0 font-monospace"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- File Upload -->
+                    <div class="mb-4">
+                        <label for="file" class="form-label">Account File *</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls,.csv,.txt" required onchange="validateFile()">
+                        <div class="form-text">
+                            Supported formats: Excel (.xlsx, .xls), CSV (.csv), Text (.txt)<br>
+                            Maximum file size: 10MB | Maximum accounts: 10,000
+                        </div>
+                        <div id="fileInfo" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- Earnings Preview -->
+                    <div class="mb-4" id="earningsPreview" style="display: none;">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6><i class="fas fa-calculator me-2"></i>Earnings Preview</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Rate per account:</strong> <span id="rateDisplay">0.00</span> TK</p>
+                                        <p class="mb-1"><strong>Total accounts:</strong> <span id="accountCount">0</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Estimated earning:</strong></p>
+                                        <h5 class="text-success mb-0"><span id="totalEarning">0.00</span> TK</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Important Notes -->
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Important Notes:</h6>
+                        <ul class="mb-0">
+                            <li>Ensure your accounts follow the exact format specified above</li>
+                            <li>Duplicate accounts will be identified and may affect earnings</li>
+                            <li>Admin review is required before earnings are credited</li>
+                            <li>Invalid or fake accounts will be rejected</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="fas fa-upload me-2"></i>Submit for Review
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Data for JavaScript -->
+<script>
+const categoryData = {{ categories | tojsonfilter | safe }};
+
+function updateSubcategories() {
+    const categorySelect = document.getElementById('category');
+    const subcategorySelect = document.getElementById('subcategory');
+    const selectedCategory = categorySelect.value;
+    
+    // Clear subcategories
+    subcategorySelect.innerHTML = '<option value="">Select subcategory...</option>';
+    
+    if (selectedCategory && categoryData[selectedCategory]) {
+        const subcategories = categoryData[selectedCategory].subcategories;
+        
+        for (const [subKey, subInfo] of Object.entries(subcategories)) {
+            const option = document.createElement('option');
+            option.value = subKey;
+            option.textContent = subInfo.name;
+            option.dataset.format = subInfo.format;
+            subcategorySelect.appendChild(option);
+        }
+        
+        subcategorySelect.disabled = false;
+    } else {
+        subcategorySelect.disabled = true;
+    }
+    
+    // Hide format section
+    document.getElementById('formatSection').style.display = 'none';
+    updateEarningsPreview();
+}
+
+function updateFormat() {
+    const subcategorySelect = document.getElementById('subcategory');
+    const formatSection = document.getElementById('formatSection');
+    const formatText = document.getElementById('formatText');
+    
+    const selectedOption = subcategorySelect.options[subcategorySelect.selectedIndex];
+    
+    if (selectedOption && selectedOption.dataset.format) {
+        formatText.textContent = selectedOption.dataset.format;
+        formatSection.style.display = 'block';
+    } else {
+        formatSection.style.display = 'none';
+    }
+    
+    updateEarningsPreview();
+}
+
+function validateFile() {
+    const fileInput = document.getElementById('file');
+    const fileInfo = document.getElementById('fileInfo');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        fileInfo.innerHTML = '';
+        updateEarningsPreview();
+        return;
+    }
+    
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        fileInfo.innerHTML = '<div class="alert alert-danger">File too large. Maximum size is 10MB.</div>';
+        fileInput.value = '';
+        return;
+    }
+    
+    // Validate file extension
+    const validExtensions = ['.xlsx', '.xls', '.csv', '.txt'];
+    const fileName = file.name.toLowerCase();
+    const isValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!isValidExtension) {
+        fileInfo.innerHTML = '<div class="alert alert-danger">Invalid file format. Please upload Excel, CSV, or text file.</div>';
+        fileInput.value = '';
+        return;
+    }
+    
+    // Show file info
+    fileInfo.innerHTML = `
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>File Selected:</strong> ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)
+        </div>
+    `;
+    
+    // Try to estimate account count (basic estimation)
+    estimateAccountCount(file);
+}
+
+function estimateAccountCount(file) {
+    // This is a basic estimation - in real implementation, you might want to read the file
+    // For now, we'll just show a placeholder
+    document.getElementById('accountCount').textContent = '~';
+    updateEarningsPreview();
+}
+
+function updateEarningsPreview() {
+    const categorySelect = document.getElementById('category');
+    const accountCountElement = document.getElementById('accountCount');
+    const rateDisplay = document.getElementById('rateDisplay');
+    const totalEarning = document.getElementById('totalEarning');
+    const earningsPreview = document.getElementById('earningsPreview');
+    
+    const selectedCategory = categorySelect.value;
+    const accountCount = accountCountElement.textContent;
+    
+    if (selectedCategory && categoryData[selectedCategory] && accountCount && accountCount !== '~') {
+        const rate = categoryData[selectedCategory].rate;
+        const count = parseInt(accountCount);
+        const total = rate * count;
+        
+        rateDisplay.textContent = rate.toFixed(2);
+        totalEarning.textContent = total.toFixed(2);
+        earningsPreview.style.display = 'block';
+    } else if (selectedCategory && categoryData[selectedCategory]) {
+        const rate = categoryData[selectedCategory].rate;
+        rateDisplay.textContent = rate.toFixed(2);
+        totalEarning.textContent = '~';
+        earningsPreview.style.display = 'block';
+    } else {
+        earningsPreview.style.display = 'none';
+    }
+}
+
+// Form submission handling
+document.getElementById('submitForm').addEventListener('submit', function(e) {
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+});
+</script>
+{% endblock %}

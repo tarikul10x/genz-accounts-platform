@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}File Management - Admin{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-file-alt me-2"></i>File Management</h4>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-filter me-2"></i>
+                    {% if status_filter %}{{ status_filter|title }}{% else %}All Status{% endif %}
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('admin.files') }}">All Status</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('admin.files', status='pending') }}">Pending</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('admin.files', status='approved') }}">Approved</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('admin.files', status='rejected') }}">Rejected</a></li>
+                </ul>
+            </div>
+            <button class="btn btn-primary" onclick="refreshFiles()">
+                <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if files.items %}
+            <!-- Summary Stats -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h5>{{ files.items | selectattr('status', 'equalto', 'pending') | list | length }}</h5>
+                            <p class="mb-0">Pending Review</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h5>{{ files.items | selectattr('status', 'equalto', 'approved') | list | length }}</h5>
+                            <p class="mb-0">Approved</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body text-center">
+                            <h5>{{ files.items | selectattr('status', 'equalto', 'rejected') | list | length }}</h5>
+                            <p class="mb-0">Rejected</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h5>{{ files.items | sum(attribute='account_count') }}</h5>
+                            <p class="mb-0">Total Accounts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Files Table -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>File Details</th>
+                            <th>Category</th>
+                            <th>Accounts</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in files.items %}
+                        <tr class="{% if file.status == 'pending' %}table-warning{% endif %}">
+                            <td>
+                                <span class="badge bg-secondary">#{{ file.file_counter }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user-circle me-2 text-muted"></i>
+                                    <div>
+                                        <div class="fw-bold">{{ file.user.username }}</div>
+                                        {% if file.user.telegram_id %}
+                                            <small class="text-muted">TG: {{ file.user.telegram_id }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-file-{{ 'excel' if file.file_format in ['xlsx', 'xls'] else ('csv' if file.file_format == 'csv' else 'alt') }} me-2 text-muted"></i>
+                                    <div>
+                                        <div title="{{ file.filename }}">
+                                            {{ file.filename[:20] }}{% if file.filename|length > 20 %}...{% endif %}
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ "{:.1f}".format(file.file_size / 1024 / 1024) }} MB • 
+                                            {{ file.submission_method }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ file.category|title }}</span>
+                                {% if file.subcategory %}
+                                    <br><small class="text-muted">{{ file.subcategory|title }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-bold">{{ file.account_count }}</div>
+                                {% if file.approved_count and file.approved_count != file.account_count %}
+                                    <small class="text-success">{{ file.approved_count }} approved</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'warning' if file.status == 'pending' else ('success' if file.status == 'approved' else 'danger') }}">
+                                    {{ file.status|title }}
+                                </span>
+                                {% if file.status == 'approved' and file.total_earning %}
+                                    <br><small class="text-success">{{ "{:,.2f}".format(file.total_earning) }} TK</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span title="{{ file.created_at.strftime('%B %d, %Y at %I:%M %p') }}">
+                                    {{ file.created_at.strftime('%m/%d/%Y') }}
+                                </span>
+                                <br><small class="text-muted">{{ file.created_at.strftime('%I:%M %p') }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" onclick="viewFile({{ file.id }})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% if file.status == 'pending' %}
+                                        <button class="btn btn-outline-success" onclick="approveFile({{ file.id }})" title="Approve">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="rejectFile({{ file.id }})" title="Reject">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    {% endif %}
+                                    {% if file.sheet_url %}
+                                        <a href="{{ file.sheet_url }}" target="_blank" class="btn btn-outline-primary" title="View Sheet">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if files.pages > 1 %}
+            <nav aria-label="Files pagination">
+                <ul class="pagination justify-content-center">
+                    {% if files.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.files', page=files.prev_num, status=status_filter) }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in files.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != files.page %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.files', page=page_num, status=status_filter) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if files.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.files', page=files.next_num, status=status_filter) }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+        {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="fas fa-file-alt fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No Files Found</h4>
+                {% if status_filter %}
+                    <p class="text-muted">No files with status "{{ status_filter }}" found.</p>
+                    <a href="{{ url_for('admin.files') }}" class="btn btn-secondary">Show All Files</a>
+                {% else %}
+                    <p class="text-muted">No files have been submitted yet.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- File Details Modal -->
+<div class="modal fade" id="fileModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">File Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="fileModalContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approve File Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Approve File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="approveForm">
+                <div class="modal-body">
+                    <input type="hidden" id="approveFileId">
+                    
+                    <div class="mb-3">
+                        <label for="approvedCount" class="form-label">Approved Account Count</label>
+                        <input type="number" class="form-control" id="approvedCount" name="approved_count" min="1" required>
+                        <div class="form-text">Enter the number of valid accounts to approve</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="adminNotes" class="form-label">Admin Notes (Optional)</label>
+                        <textarea class="form-control" id="adminNotes" name="admin_notes" rows="3" placeholder="Add any notes about the approval..."></textarea>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Approval Details</h6>
+                        <p class="mb-1"><strong>Rate:</strong> <span id="approvalRate">0.00</span> TK per account</p>
+                        <p class="mb-1"><strong>Total Earning:</strong> <span id="approvalEarning">0.00</span> TK</p>
+                        <p class="mb-0 small text-muted">Amount will be added to user's balance instantly</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Approve File
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reject File Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="rejectForm">
+                <div class="modal-body">
+                    <input type="hidden" id="rejectFileId">
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        This action will reject the file and no payment will be made to the user.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="rejectNotes" class="form-label">Rejection Reason *</label>
+                        <textarea class="form-control" id="rejectNotes" name="admin_notes" rows="4" required placeholder="Please provide a clear reason for rejection..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times me-2"></i>Reject File
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewFile(fileId) {
+    const modal = new bootstrap.Modal(document.getElementById('fileModal'));
+    document.getElementById('fileModalContent').innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Loading file details...</p>
+        </div>
+    `;
+    modal.show();
+    
+    // Here you would fetch detailed file information via AJAX
+    setTimeout(() => {
+        document.getElementById('fileModalContent').innerHTML = `
+            <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle me-2"></i>File Information</h6>
+                <p>Detailed file information would be displayed here, including:</p>
+                <ul class="mb-0">
+                    <li>Complete file content preview</li>
+                    <li>Account validation results</li>
+                    <li>Duplicate detection results</li>
+                    <li>User submission history</li>
+                    <li>Processing timeline</li>
+                </ul>
+            </div>
+        `;
+    }, 1000);
+}
+
+function approveFile(fileId) {
+    document.getElementById('approveFileId').value = fileId;
+    document.getElementById('approveForm').action = `/admin/file/${fileId}/approve`;
+    
+    // Set default values - in real app, fetch from server
+    document.getElementById('approvedCount').value = '';
+    document.getElementById('approvedCount').max = '1000'; // Set from actual file
+    document.getElementById('approvalRate').textContent = '5.00';
+    
+    // Update earning calculation
+    document.getElementById('approvedCount').addEventListener('input', function() {
+        const count = parseInt(this.value) || 0;
+        const rate = parseFloat(document.getElementById('approvalRate').textContent);
+        document.getElementById('approvalEarning').textContent = (count * rate).toFixed(2);
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('approveModal'));
+    modal.show();
+}
+
+function rejectFile(fileId) {
+    document.getElementById('rejectFileId').value = fileId;
+    document.getElementById('rejectForm').action = `/admin/file/${fileId}/reject`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
+    modal.show();
+}
+
+function refreshFiles() {
+    location.reload();
+}
+
+// Form submission handling
+document.getElementById('approveForm').addEventListener('submit', function(e) {
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+});
+
+document.getElementById('rejectForm').addEventListener('submit', function(e) {
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+});
+</script>
+{% endblock %}

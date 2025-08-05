@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Withdraw Money - Gen Z Accounts Submission{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Withdrawal Form -->
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Withdraw Money</h4>
+            </div>
+            <div class="card-body">
+                <!-- Balance Info -->
+                <div class="alert alert-info">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="mb-1"><i class="fas fa-wallet me-2"></i>Available Balance</h5>
+                            <h3 class="text-success mb-0">{{ "{:,.2f}".format(user.balance) }} TK</h3>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <p class="mb-1"><strong>Minimum withdrawal:</strong> 500.00 TK</p>
+                            <p class="mb-0"><strong>Processing time:</strong> 24-48 hours</p>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if user.balance >= 500 %}
+                    <form method="POST" id="withdrawalForm">
+                        <!-- Amount -->
+                        <div class="mb-4">
+                            <label for="amount" class="form-label">Withdrawal Amount *</label>
+                            <div class="input-group">
+                                <input type="number" 
+                                       class="form-control form-control-lg" 
+                                       id="amount" 
+                                       name="amount" 
+                                       min="500" 
+                                       max="{{ user.balance }}" 
+                                       step="0.01" 
+                                       required
+                                       onchange="updatePreview()">
+                                <span class="input-group-text">TK</span>
+                            </div>
+                            <div class="form-text">
+                                Minimum: 500 TK | Maximum: {{ "{:,.2f}".format(user.balance) }} TK
+                            </div>
+                        </div>
+                        
+                        <!-- Payment Method -->
+                        <div class="mb-4">
+                            <label for="payment_method" class="form-label">Payment Method *</label>
+                            <select class="form-select form-select-lg" id="payment_method" name="payment_method" required onchange="updatePaymentFields()">
+                                <option value="">Select payment method...</option>
+                                {% for method_key, method_info in payment_methods.items() %}
+                                    <option value="{{ method_key }}">{{ method_info.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Dynamic Payment Fields -->
+                        <div id="paymentFields"></div>
+                        
+                        <!-- Preview -->
+                        <div id="withdrawalPreview" class="card bg-light mb-4" style="display: none;">
+                            <div class="card-body">
+                                <h6><i class="fas fa-receipt me-2"></i>Withdrawal Summary</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Amount:</strong> <span id="previewAmount">0.00</span> TK</p>
+                                        <p class="mb-1"><strong>Method:</strong> <span id="previewMethod">-</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Processing fee:</strong> 0.00 TK</p>
+                                        <p class="mb-1"><strong>You will receive:</strong> <span id="previewReceive" class="text-success fw-bold">0.00</span> TK</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Terms -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="terms" required>
+                            <label class="form-check-label" for="terms">
+                                I confirm that the payment information is correct and agree to the <a href="#" class="text-primary">withdrawal terms</a>
+                            </label>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Withdrawal Request
+                            </button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h4>Insufficient Balance</h4>
+                        <p class="text-muted">You need at least 500 TK to make a withdrawal.</p>
+                        <p class="text-muted">Current balance: {{ "{:,.2f}".format(user.balance) }} TK</p>
+                        <a href="{{ url_for('user.submit_file') }}" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>Submit More Files
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Payment Methods Info -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-credit-card me-2"></i>Available Payment Methods</h6>
+            </div>
+            <div class="card-body">
+                {% for method_key, method_info in payment_methods.items() %}
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <span>{{ method_info.name }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Recent Withdrawals -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Recent Withdrawals</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_withdrawals %}
+                    {% for withdrawal in recent_withdrawals %}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <div class="fw-bold">{{ "{:,.2f}".format(withdrawal.amount) }} TK</div>
+                                <small class="text-muted">
+                                    {{ withdrawal.payment_method|title }} • 
+                                    {{ withdrawal.created_at.strftime('%m/%d/%Y') }}
+                                </small>
+                            </div>
+                            <span class="badge bg-{{ 'warning' if withdrawal.status == 'pending' else ('success' if withdrawal.status == 'approved' else 'danger') }}">
+                                {{ withdrawal.status|title }}
+                            </span>
+                        </div>
+                        {% if not loop.last %}<hr class="my-2">{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No withdrawals yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const paymentMethods = {{ payment_methods | tojsonfilter | safe }};
+
+function updatePaymentFields() {
+    const methodSelect = document.getElementById('payment_method');
+    const fieldsDiv = document.getElementById('paymentFields');
+    const selectedMethod = methodSelect.value;
+    
+    if (!selectedMethod || !paymentMethods[selectedMethod]) {
+        fieldsDiv.innerHTML = '';
+        updatePreview();
+        return;
+    }
+    
+    const method = paymentMethods[selectedMethod];
+    let fieldsHTML = '<div class="row">';
+    
+    method.fields.forEach((field, index) => {
+        const fieldName = field.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        let inputType = 'text';
+        let placeholder = '';
+        
+        switch(field) {
+            case 'number':
+                inputType = 'tel';
+                placeholder = 'Enter mobile number';
+                break;
+            case 'email':
+                inputType = 'email';
+                placeholder = 'Enter email address';
+                break;
+            case 'account_number':
+                placeholder = 'Enter account number';
+                break;
+            case 'bank_name':
+                placeholder = 'Enter bank name';
+                break;
+            case 'branch':
+                placeholder = 'Enter branch name';
+                break;
+            default:
+                placeholder = `Enter ${fieldName.toLowerCase()}`;
+        }
+        
+        fieldsHTML += `
+            <div class="col-md-${method.fields.length > 2 ? '12' : '6'} mb-3">
+                <label for="${field}" class="form-label">${fieldName} *</label>
+                <input type="${inputType}" 
+                       class="form-control" 
+                       id="${field}" 
+                       name="${field}" 
+                       placeholder="${placeholder}" 
+                       required
+                       onchange="updatePreview()">
+            </div>
+        `;
+    });
+    
+    fieldsHTML += '</div>';
+    fieldsDiv.innerHTML = fieldsHTML;
+    updatePreview();
+}
+
+function updatePreview() {
+    const amount = document.getElementById('amount').value;
+    const methodSelect = document.getElementById('payment_method');
+    const preview = document.getElementById('withdrawalPreview');
+    
+    if (amount && methodSelect.value) {
+        const selectedMethod = paymentMethods[methodSelect.value];
+        
+        document.getElementById('previewAmount').textContent = parseFloat(amount).toFixed(2);
+        document.getElementById('previewMethod').textContent = selectedMethod.name;
+        document.getElementById('previewReceive').textContent = parseFloat(amount).toFixed(2);
+        
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Form submission handling
+document.getElementById('withdrawalForm').addEventListener('submit', function(e) {
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+});
+
+// Quick amount buttons
+function setAmount(amount) {
+    document.getElementById('amount').value = amount;
+    updatePreview();
+}
+</script>
+{% endblock %}
