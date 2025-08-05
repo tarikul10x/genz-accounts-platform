@@ -5,4 +5,6 @@ secrets.txt
 *.pyc
 __pycache__/
 venv/
-deployment_requirements.txtdeployment_requirements.txt 
+deployment_requirements.txt
+main.py
+main.py 
