@@ -4,3 +4,5 @@ config.py
 secrets.txt
 *.pyc
 __pycache__/
+venv/
+deployment_requirements.txtdeployment_requirements.txt 
